@@ -1,19 +1,15 @@
 # MPLS Traffic Engineering on Cisco IOS XRv9000 — EVE-NG Lab
 
-<<<<<<< HEAD
 ![Platform](https://img.shields.io/badge/platform-Cisco%20IOS%20XRv9000-1BA0D7?logo=cisco&logoColor=white)
 ![IOS XR](https://img.shields.io/badge/IOS%20XR-24.3.1-005073)
 ![EVE-NG](https://img.shields.io/badge/EVE--NG-Community%20%7C%20Pro-orange)
 ![Transport](https://img.shields.io/badge/transport-RSVP--TE%20%2B%20LDP-success)
 ![Phases](https://img.shields.io/badge/phases-6-blueviolet)
 
-=======
->>>>>>> 3f9348d299d29afeb00afd7b4cf09322e1b851e2
 A hands-on lab building MPLS Traffic Engineering the **classic way** — using RSVP-TE
 for tunnel signaling and LDP for label distribution. This is how operators ran TE
 before Segment Routing, and understanding it makes SR-TE's advantages obvious.
 
-<<<<<<< HEAD
 > **How to use this lab:**
 > Follow the phases one by one. Paste the config, run the verify commands, confirm it
 > works — *then* move to the next phase. You don't need to understand everything upfront;
@@ -21,18 +17,15 @@ before Segment Routing, and understanding it makes SR-TE's advantages obvious.
 >
 > Want the theory first? → [`docs/CONCEPTS.md`](docs/CONCEPTS.md)
 
-=======
->>>>>>> 3f9348d299d29afeb00afd7b4cf09322e1b851e2
 > **Read this alongside the SR-MPLS lab.**
 > Both labs use the **same topology and addressing**. The only difference is the
 > transport technology. Comparing them side-by-side is the fastest way to understand
 > *why* the industry moved from RSVP-TE to SR-TE.
 
-**GitHub:** https://github.com/bosamart/Cisco-IOS-XR-MPLS-Traffic-Engineering-Lab
+**GitHub:** https://github.com/bosamart/xrv9000-mpls-te-lab
 
 ---
 
-<<<<<<< HEAD
 ## TL;DR — quick start
 
 For those who already know IOS XR and just want to build it:
@@ -57,8 +50,6 @@ All `!!!!!` → the whole stack (IS-IS → LDP → RSVP-TE → CSPF/autoroute �
 
 ---
 
-=======
->>>>>>> 3f9348d299d29afeb00afd7b4cf09322e1b851e2
 ## Lab Environment
 
 | Component | Detail |

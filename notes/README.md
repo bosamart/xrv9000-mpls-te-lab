@@ -6,12 +6,8 @@
 - Build foundation for understanding why operators moved to Segment Routing
 
 ## Topics Covered
-<<<<<<< HEAD
 - [x] Phase 1 — IS-IS baseline
-=======
-- [ ] Phase 1 — IS-IS baseline
->>>>>>> 3f9348d299d29afeb00afd7b4cf09322e1b851e2
-- [ ] Phase 2 — LDP label distribution
+- [x] Phase 2 — LDP label distribution
 - [ ] Phase 3 — RSVP-TE basic tunnel with explicit path
 - [ ] Phase 4 — CSPF path computation + autoroute
 - [ ] Phase 5 — FRR link and node protection
@@ -22,11 +18,7 @@
 > CE1 on R1, CE2 on R4
 
 ## GitHub Repo
-<<<<<<< HEAD
-https://github.com/bosamart/Cisco-IOS-XR-MPLS-Traffic-Engineering-Lab.git
-=======
-https://github.com/bosamart/Cisco-IOS-XR-MPLS-Traffic-Engineering-Lab
->>>>>>> 3f9348d299d29afeb00afd7b4cf09322e1b851e2
+https://github.com/bosamart/xrv9000-mpls-te-lab.git
 
 ## Related Lab
 SR-MPLS lab: ../SR-MPLS/ — same topology, same services, SR transport instead of RSVP-TE
@@ -34,11 +26,13 @@ SR-MPLS lab: ../SR-MPLS/ — same topology, same services, SR transport instead 
 ## Session Log
 | Date | Phase | Topic | Outcome |
 |------|-------|-------|---------|
-<<<<<<< HEAD
-| 2026-06-24 | Phase 1 | IS-IS baseline — all adjacencies up, loopbacks reachable | ✅ Pass |
-=======
-|      |       |       |         |
->>>>>>> 3f9348d299d29afeb00afd7b4cf09322e1b851e2
+| 2026-06-24 | Phase 1 | IS-IS baseline — all adjacencies up, loopbacks reachable, ECMP to 4.4.4.4 | ✅ Pass |
+| 2026-06-24 | Phase 2 | LDP sessions up, labels distributed, traceroute shows label + PHP | ✅ Pass |
+
+> Detailed per-phase output: [`phase1-isis-verify.md`](phase1-isis-verify.md), [`phase2-ldp-verify.md`](phase2-ldp-verify.md)
 
 ## Lessons Learned
-> Add notes here as you go through each phase
+- `show clns interface brief` is IOS, not IOS-XR — use `show isis interface brief` on XR.
+- Configs are cumulative (all 6 phases), so Phase 2 forwarding already shows L3VPN
+  labels (CUST-A aggregate, CE1 prefix) and `Tunnel=Yes` on interfaces. Expected.
+- ImpNull (implicit-null) on directly-connected prefixes is what drives PHP.
