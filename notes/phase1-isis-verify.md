@@ -165,7 +165,54 @@ R4.00-00            * 0x00000006   0x9c92        812  /*            0/0/0
 
 ---
 
-## Still to capture for a complete Phase 1 record
+## Routing table + reachability (R1)
 
-- `show route isis` on R1 — confirm remote loopbacks learned, ECMP to 4.4.4.4/32
-- `ping 4.4.4.4 source 1.1.1.1` — end-to-end IGP reachability across the diamond
+```
+RP/0/RP0/CPU0:R1#show route isis
+i L2 2.2.2.2/32 [115/10] via 10.12.0.2, GigabitEthernet0/0/0/1
+i L2 3.3.3.3/32 [115/10] via 10.13.0.2, GigabitEthernet0/0/0/3
+i L2 4.4.4.4/32 [115/20] via 10.13.0.2, GigabitEthernet0/0/0/3
+                [115/20] via 10.12.0.2, GigabitEthernet0/0/0/1      <-- ECMP
+i L2 10.23.0.0/30 [115/20] via 10.13.0.2, Gi0/0/0/3
+                  [115/20] via 10.12.0.2, Gi0/0/0/1
+i L2 10.24.0.0/30 [115/20] via 10.12.0.2, Gi0/0/0/1
+i L2 10.34.0.0/30 [115/20] via 10.13.0.2, Gi0/0/0/3
+
+RP/0/RP0/CPU0:R1#show isis topology
+IS-IS CORE paths to IPv4 Unicast (Level-2) routers
+System Id          Metric    Next-Hop   Interface       SNPA
+R1                 --
+R2                 10        R2         Gi0/0/0/1       *PtoP*
+R3                 10        R3         Gi0/0/0/3       *PtoP*
+R4                 20        R2         Gi0/0/0/1       *PtoP*
+R4                 20        R3         Gi0/0/0/3       *PtoP*
+
+RP/0/RP0/CPU0:R1#show route 4.4.4.4/32
+Routing entry for 4.4.4.4/32
+  Known via "isis CORE", distance 115, metric 20, type level-2
+  Routing Descriptor Blocks
+    10.13.0.2, from 4.4.4.4, via GigabitEthernet0/0/0/3   metric 20
+    10.12.0.2, from 4.4.4.4, via GigabitEthernet0/0/0/1   metric 20
+```
+
+```
+RP/0/RP0/CPU0:R1#ping 2.2.2.2 source 1.1.1.1
+!!!!!  Success rate is 100 percent (5/5), round-trip min/avg/max = 3/8/31 ms
+
+RP/0/RP0/CPU0:R1#ping 3.3.3.3 source 1.1.1.1
+!!!!!  Success rate is 100 percent (5/5), round-trip min/avg/max = 4/8/27 ms
+
+RP/0/RP0/CPU0:R1#ping 4.4.4.4 source 1.1.1.1
+!!!!!  Success rate is 100 percent (5/5), round-trip min/avg/max = 3/3/3 ms
+```
+
+(Loopback0-sourced pings to 2.2.2.2 / 3.3.3.3 / 4.4.4.4 also returned 100%.)
+
+**Reachability analysis:**
+- Directly-connected loopbacks (R2, R3) at **metric 10**; far PE (R4) at **metric 20**.
+- `4.4.4.4/32` installed as **ECMP** — two equal-cost next-hops via R2 (10.12.0.2)
+  and R3 (10.13.0.2), exactly as the diamond predicts. This is what makes TE
+  meaningful in later phases.
+- End-to-end IGP reachability across the diamond confirmed: **100% on all loopbacks.** ✔
+
+**Phase 1 record complete.**
