@@ -4,7 +4,7 @@
 ![IOS XR](https://img.shields.io/badge/IOS%20XR-24.3.1-005073)
 ![EVE-NG](https://img.shields.io/badge/EVE--NG-Community%20%7C%20Pro-orange)
 ![Transport](https://img.shields.io/badge/transport-RSVP--TE%20%2B%20LDP-success)
-![Phases](https://img.shields.io/badge/phases-8-blueviolet)
+![Phases](https://img.shields.io/badge/phases-9-blueviolet)
 
 A hands-on lab building MPLS Traffic Engineering the **classic way** — using RSVP-TE
 for tunnel signaling and LDP for label distribution. This is how operators ran TE
@@ -113,6 +113,7 @@ and FRR has a real detour to use. The GOLD/BRONZE coloring is the Phase 7 affini
 | 6 | L3VPN over MPLS-TE | Same service as SR lab, different transport |
 | 7 | Affinity / admin-group coloring | Steer a tunnel by link color, not explicit hops |
 | 8 | Auto-bandwidth | Tunnel resizes its own reservation from measured traffic |
+| 9 | DS-TE priority + preemption | High-priority tunnel bumps a low-priority one off a full link |
 
 ---
 
@@ -126,6 +127,7 @@ and FRR has a real detour to use. The GOLD/BRONZE coloring is the Phase 7 affini
 - [x] **Phase 6** — CE1↔CE2 L3VPN ping success over MPLS-TE tunnel
 - [x] **Phase 7** — affinity-steered tunnel: GOLD→north path, BRONZE→south path (CSPF, no explicit hops)
 - [x] **Phase 8** — auto-bandwidth resized tunnel-te1's reservation (100M → 30M floor) from measured traffic, make-before-break
+- [x] **Phase 9** — high-priority tunnel (setup 0) preempted a low-priority one (hold 7) off a full link; victim down with admission/bw PathErr
 
 ---
 
@@ -536,6 +538,68 @@ show mpls traffic-eng tunnels auto-bw brief
 > grow. The mechanism is identical either way — measure, then resize within bounds.
 
 **Revert to static if desired:** `interface tunnel-te1 / no auto-bw`.
+
+---
+
+## Phase 9 — DS-TE Priority + Preemption
+
+**Objective:** show the *one* case where bandwidth makes a tunnel go **down** — a
+higher-priority tunnel preempting a lower-priority one off a link that's out of
+reservable bandwidth.
+
+**The model:** every tunnel has a **setup** and **hold** priority, `0` (best) to `7`
+(worst), default `7 7`. Setup = how aggressively it preempts others coming up; hold = how
+well it resists being preempted. **Rule:** a new tunnel preempts an existing one when
+`new setup < existing hold` (lower number wins).
+
+This runs on two throwaway tunnels forced over R1→R3→R4, each wanting 600M on the 1G link —
+only one fits. (Both need `affinity 0x0 mask 0x0` — the south links are BRONZE, and the
+default `0x0/0xffff` affinity would reject them; the same Phase 7b trap bites new tunnels.)
+
+```
+! Low-priority tunnel:
+interface tunnel-te5
+ ipv4 unnumbered Loopback0
+ destination 4.4.4.4
+ priority 7 7
+ affinity 0x0 mask 0x0
+ signalled-bandwidth 600000
+ path-option 1 explicit name SOUTH-R1-TO-R4    ! 10.13.0.2 -> 10.34.0.2
+
+! High-priority tunnel (bring up second):
+interface tunnel-te6
+ priority 0 0
+ affinity 0x0 mask 0x0
+ signalled-bandwidth 600000
+ path-option 1 explicit name SOUTH-R1-TO-R4
+```
+
+**Verify — watch the bandwidth change hands:**
+
+```
+show mpls traffic-eng link-management bandwidth-allocation     ! the proof
+```
+- With only te5 up: `Gi0/0/0/3` shows **600000 locked at PRIORITY 7**.
+- After te6 comes up: **te5 is DOWN**, te6 is up, and the **600000 is now locked at
+  PRIORITY 0**. The reservation moved from the 7-row to the 0-row.
+
+```
+show mpls traffic-eng tunnels 5 detail
+! Last Signalled Error: PathErr(1,2) admission (1), bandwidth unavailable (2)
+! -> the preemption signature; then "No path (bw)" because te5 has no fallback.
+```
+
+**The lesson (your bandwidth question, fully answered):** over-sending a tunnel drops
+nothing — a reservation is admission-control bookkeeping, not a policer. The *only* way
+bandwidth takes a tunnel down is **preemption**: when the books are full, a higher-priority
+tunnel bumps a lower-priority one (`0 < 7`). Give critical services low priority numbers so
+they win, and give best-effort tunnels a dynamic fallback so being preempted means
+*reroute*, not outage. Default preemption is **hard** (instant tear); `soft-preemption`
+reroutes the victim gracefully first.
+
+**Cleanup:** `no interface tunnel-te5` / `no interface tunnel-te6` /
+`no explicit-path name SOUTH-R1-TO-R4`, and restore `rsvp interface Gi0/0/0/3 / bandwidth
+1000000`.
 
 ---
 

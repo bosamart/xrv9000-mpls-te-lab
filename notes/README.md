@@ -14,6 +14,7 @@
 - [x] Phase 6 — L3VPN over MPLS-TE
 - [x] Phase 7 — Affinity / admin-group coloring
 - [x] Phase 8 — Auto-bandwidth
+- [x] Phase 9 — DS-TE priority + preemption
 
 ## Lab Topology
 > Same diamond as SR-MPLS lab: R1(PE) – R2(P) – R4(PE), R1 – R3(P) – R4, R2–R3 cross-link
@@ -37,10 +38,11 @@ SR-MPLS lab: ../SR-MPLS/ — same topology, same services, SR transport instead 
 | 2026-06-25 | Phase 7 | Affinity coloring: tunnel-te2 include GOLD → R1→R2→R4, include BRONZE → R1→R3→R4 (CSPF, no explicit path). Saw make-before-break reopt | ✅ Pass |
 | 2026-06-25 | Phase 7b | explicit+affinity: color drops a reachable path; `verbatim` bypasses policy not signalling; **default affinity 0x0/0xffff broke tunnel-te1** → fixed with `affinity 0x0 mask 0x0`. Root cause of cross-link: R2 missing `mpls traffic-eng interface` | ✅ Pass |
 | 2026-06-25 | Phase 8 | Auto-bandwidth on tunnel-te1: resized reservation 100M → 30M floor from measured traffic, make-before-break (LSP 5→6) | ✅ Pass |
+| 2026-06-25 | Phase 9 | DS-TE preemption: te6 (setup 0) bumped te5 (hold 7) off R1→R3; 600M moved priority 7→0, te5 down with admission/bw PathErr | ✅ Pass |
 
-> Detailed per-phase output: [`phase1-isis-verify.md`](phase1-isis-verify.md), [`phase2-ldp-verify.md`](phase2-ldp-verify.md), [`phase3-rsvp-te-verify.md`](phase3-rsvp-te-verify.md), [`phase4-cspf-autoroute-verify.md`](phase4-cspf-autoroute-verify.md), [`phase5-frr-verify.md`](phase5-frr-verify.md), [`phase6-l3vpn-verify.md`](phase6-l3vpn-verify.md), [`phase7-affinity-verify.md`](phase7-affinity-verify.md), [`phase7b-explicit-affinity-verify.md`](phase7b-explicit-affinity-verify.md), [`phase8-autobw-verify.md`](phase8-autobw-verify.md)
+> Detailed per-phase output: [`phase1-isis-verify.md`](phase1-isis-verify.md), [`phase2-ldp-verify.md`](phase2-ldp-verify.md), [`phase3-rsvp-te-verify.md`](phase3-rsvp-te-verify.md), [`phase4-cspf-autoroute-verify.md`](phase4-cspf-autoroute-verify.md), [`phase5-frr-verify.md`](phase5-frr-verify.md), [`phase6-l3vpn-verify.md`](phase6-l3vpn-verify.md), [`phase7-affinity-verify.md`](phase7-affinity-verify.md), [`phase7b-explicit-affinity-verify.md`](phase7b-explicit-affinity-verify.md), [`phase8-autobw-verify.md`](phase8-autobw-verify.md), [`phase9-preemption-verify.md`](phase9-preemption-verify.md)
 
-**All eight phases verified end to end. ✅**
+**All nine phases verified end to end. ✅**
 
 ## Lessons Learned
 - `show clns interface brief` is IOS, not IOS-XR — use `show isis interface brief` on XR.
