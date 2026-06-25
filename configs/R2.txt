@@ -1,9 +1,10 @@
 ! ====================================================================
-! R2 - P  (Provider core)  -- FINAL (Phases 1-5)
+! R2 - P  (Provider core)  -- FINAL (Phases 1-5, 7)
 ! Phase 1 : IS-IS L2 baseline
 ! Phase 2 : LDP label distribution
 ! Phase 3 : RSVP + MPLS-TE interface enablement
 ! Phase 5 : FRR auto-tunnel backup (R2 is a PLR for R1->R2->R4 path)
+! Phase 7 : Affinity coloring -- both core links GOLD (north path)
 ! IPv4 Lo0 2.2.2.2/32
 ! Links: Gi0/0/0/0->R1, Gi0/0/0/1->R3 (cross-link), Gi0/0/0/3->R4
 ! NOTE: new XR interfaces may come up admin-down -- 'no shutdown' when pasting.
@@ -79,9 +80,13 @@ rsvp
   bandwidth 1000000
  !
 !
-! ===== Phase 3: MPLS-TE global =====
+! ===== Phase 3: MPLS-TE global  (+ Phase 5 FRR, Phase 7 affinity) =====
 mpls traffic-eng
+ ! Phase 7: affinity-map must be defined identically on every router
+ affinity-map GOLD bit-position 0
+ affinity-map BRONZE bit-position 1
  interface GigabitEthernet0/0/0/0
+  attribute-names GOLD                 ! Phase 7: R2->R1 = north (GOLD)
  !
  interface GigabitEthernet0/0/0/1
   ! Phase 5: protect the ON-PATH cross-link (LSP egresses R2 here toward R3).
@@ -90,6 +95,7 @@ mpls traffic-eng
   auto-tunnel backup
  !
  interface GigabitEthernet0/0/0/3
+  attribute-names GOLD                 ! Phase 7: R2->R4 = north (GOLD)
  !
  ! Phase 5: auto-tunnel backup pool (R2 = PLR for tunnel R1->R4 via R2)
  auto-tunnel backup

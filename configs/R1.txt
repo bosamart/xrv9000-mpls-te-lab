@@ -1,11 +1,12 @@
 ! ====================================================================
-! R1 - PE  (Provider Edge)  -- FINAL (Phases 1-6)
+! R1 - PE  (Provider Edge)  -- FINAL (Phases 1-7)
 ! Phase 1 : IS-IS L2 baseline
 ! Phase 2 : LDP label distribution
 ! Phase 3 : RSVP + explicit-path TE tunnel (scenic R1->R2->R3->R4)
 ! Phase 4 : CSPF + autoroute (tunnel in routing table)
 ! Phase 5 : FRR enabled on tunnel
 ! Phase 6 : L3VPN (MP-BGP VPNv4) over MPLS-TE
+! Phase 7 : Affinity coloring (tunnel-te2 steered by GOLD/BRONZE)
 ! IPv4 Lo0 1.1.1.1/32
 ! NOTE: new XR interfaces may come up admin-down -- 'no shutdown' when pasting.
 ! ====================================================================
@@ -58,6 +59,15 @@ interface tunnel-te1
  path-option 1 explicit name SCENIC-R1-TO-R4   ! Phase 3: forced scenic path
  path-option 2 dynamic                          ! Phase 4: CSPF fallback
 !
+! ===== Phase 7: affinity-steered demo tunnel (CSPF picks path by link color) =====
+! 'affinity include GOLD'  -> north path R1->R2->R4
+! 'affinity include BRONZE'-> south path R1->R3->R4   (flip to re-steer, no explicit path)
+interface tunnel-te2
+ ipv4 unnumbered Loopback0
+ destination 4.4.4.4
+ path-option 1 dynamic
+ affinity include GOLD
+!
 ! ===== Phase 1: IS-IS =====
 router isis CORE
  is-type level-2-only
@@ -100,11 +110,16 @@ rsvp
   bandwidth 1000000
  !
 !
-! ===== Phase 3: MPLS-TE global =====
+! ===== Phase 3: MPLS-TE global  (+ Phase 7 affinity coloring) =====
 mpls traffic-eng
+ ! Phase 7: affinity-map must be defined identically on every router
+ affinity-map GOLD bit-position 0
+ affinity-map BRONZE bit-position 1
  interface GigabitEthernet0/0/0/1
+  attribute-names GOLD                 ! Phase 7: R1->R2 = north (GOLD)
  !
  interface GigabitEthernet0/0/0/3
+  attribute-names BRONZE               ! Phase 7: R1->R3 = south (BRONZE)
  !
  reoptimize 300
 !

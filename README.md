@@ -4,7 +4,7 @@
 ![IOS XR](https://img.shields.io/badge/IOS%20XR-24.3.1-005073)
 ![EVE-NG](https://img.shields.io/badge/EVE--NG-Community%20%7C%20Pro-orange)
 ![Transport](https://img.shields.io/badge/transport-RSVP--TE%20%2B%20LDP-success)
-![Phases](https://img.shields.io/badge/phases-6-blueviolet)
+![Phases](https://img.shields.io/badge/phases-7-blueviolet)
 
 A hands-on lab building MPLS Traffic Engineering the **classic way** — using RSVP-TE
 for tunnel signaling and LDP for label distribution. This is how operators ran TE
@@ -125,6 +125,7 @@ and FRR has a real detour to use.
 | 4 | MPLS-TE — CSPF + autoroute | Headend computes constrained path; routes via tunnel |
 | 5 | FRR (Fast Reroute) | Link/node protection — compare to TI-LFA in SR lab |
 | 6 | L3VPN over MPLS-TE | Same service as SR lab, different transport |
+| 7 | Affinity / admin-group coloring | Steer a tunnel by link color, not explicit hops |
 
 ---
 
@@ -136,6 +137,7 @@ and FRR has a real detour to use.
 - [x] **Phase 4** — CSPF path computed, tunnel in routing table via autoroute
 - [x] **Phase 5** — FRR backup tunnel active, link failure reroutes in <50ms
 - [x] **Phase 6** — CE1↔CE2 L3VPN ping success over MPLS-TE tunnel
+- [x] **Phase 7** — affinity-steered tunnel: GOLD→north path, BRONZE→south path (CSPF, no explicit hops)
 
 ---
 
@@ -367,6 +369,60 @@ ping 22.22.22.22 source 11.11.11.11
 > **Key insight:** the service config (VRF, RD/RT, PE-CE BGP) is *identical* to the
 > SR-MPLS lab. Only the transport changed — from SR prefix-SID to RSVP-TE tunnel.
 > This is why the industry says services are decoupled from transport.
+
+---
+
+## Phase 7 — Affinity / Admin-Group Coloring
+
+**Objective:** steer a tunnel by **link color** instead of explicit hops. Color the two
+disjoint paths, then let CSPF pick by policy — change one line to re-route.
+
+**How it works:** every link gets an *admin-group* (affinity) bit, given a name via an
+`affinity-map`. A tunnel's `affinity include <color>` makes CSPF a hard constraint:
+only links carrying that color are eligible. This is how operators keep traffic off
+(say) high-latency or paid-transit links — color them, then include/exclude by policy.
+
+Here the **north path** (R1–R2–R4) is `GOLD`, the **south path** (R1–R3–R4) is
+`BRONZE`, the cross-link is left uncolored. A demo `tunnel-te2` (dynamic path, no
+autoroute — leaves `tunnel-te1` untouched) is steered by its affinity.
+
+```
+! Every router — affinity-map must be identical network-wide:
+mpls traffic-eng
+ affinity-map GOLD bit-position 0
+ affinity-map BRONZE bit-position 1
+ interface <north-link>
+  attribute-names GOLD            ! color the link
+ interface <south-link>
+  attribute-names BRONZE
+
+! Headend R1 — the steered tunnel:
+interface tunnel-te2
+ ipv4 unnumbered Loopback0
+ destination 4.4.4.4
+ path-option 1 dynamic
+ affinity include GOLD            ! CSPF uses GOLD-only links -> north path
+```
+
+**Verify** (tunnel-te2 has no autoroute — read the path from the tunnel detail, not a
+destination traceroute):
+
+```
+show mpls traffic-eng tunnels 2 detail     ! Explicit Route = 10.12.0.2 -> 10.24.0.2 (north, GOLD)
+show mpls traffic-eng topology             ! see Attribute Names / affinity per link
+
+! Re-steer by changing one line:
+interface tunnel-te2
+ no affinity include GOLD
+ affinity include BRONZE                    ! now 10.13.0.2 -> 10.34.0.2 (south, BRONZE)
+```
+
+> **Gotchas (both hit during the build):**
+> - In IOS-XR a bare `!` is a *comment*, not a submode exit. Use `exit`/`root` to leave
+>   `config-mpls-te-if` before configuring `interface tunnel-te2` (it's global, not under
+>   `mpls traffic-eng`).
+> - Changing affinity on a live tunnel triggers a **make-before-break** reoptimization —
+>   the old LSP stays up until the new (re-colored) path installs. No traffic loss.
 
 ---
 

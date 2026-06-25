@@ -1,10 +1,11 @@
 ! ====================================================================
-! R4 - PE  (Provider Edge)  -- FINAL (Phases 1-6)
+! R4 - PE  (Provider Edge)  -- FINAL (Phases 1-7)
 ! Phase 1 : IS-IS L2 baseline
 ! Phase 2 : LDP label distribution
 ! Phase 3 : RSVP + MPLS-TE interface enablement (R4 = tunnel tail)
 ! Phase 5 : FRR auto-tunnel backup
 ! Phase 6 : L3VPN (MP-BGP VPNv4) over MPLS-TE
+! Phase 7 : Affinity coloring -- Gi0/0/0/2 GOLD (north), Gi0/0/0/3 BRONZE (south)
 ! IPv4 Lo0 4.4.4.4/32
 ! Links: Gi0/0/0/1->CE2 (CUST-A), Gi0/0/0/2->R2, Gi0/0/0/3->R3
 ! NOTE: new XR interfaces may come up admin-down -- 'no shutdown' when pasting.
@@ -87,11 +88,16 @@ rsvp
   bandwidth 1000000
  !
 !
-! ===== Phase 3: MPLS-TE global =====
+! ===== Phase 3: MPLS-TE global  (+ Phase 7 affinity) =====
 mpls traffic-eng
+ ! Phase 7: affinity-map must be defined identically on every router
+ affinity-map GOLD bit-position 0
+ affinity-map BRONZE bit-position 1
  interface GigabitEthernet0/0/0/2
+  attribute-names GOLD                 ! Phase 7: R4->R2 = north (GOLD)
  !
  interface GigabitEthernet0/0/0/3
+  attribute-names BRONZE               ! Phase 7: R4->R3 = south (BRONZE)
  !
  auto-tunnel backup
   tunnel-id min 100 max 200
