@@ -616,6 +616,16 @@ reroutes the victim gracefully first.
 
 ---
 
+## Going further — inter-area TE & PCE
+
+This lab is a single IS-IS Level-2 area, so it doesn't cross area boundaries. In a real
+operator (access / aggregation / core in separate areas) the headend can't see past its own
+area, and TE has to be solved with **loose-hop expansion** (classic) or a **PCE + BGP-LS**
+(modern, SR-friendly). That's the natural next concept — written up in
+[`docs/INTER-AREA-TE-and-PCE.md`](docs/INTER-AREA-TE-and-PCE.md).
+
+---
+
 ## References
 
 - Cisco IOS XR MPLS Traffic Engineering Configuration Guide

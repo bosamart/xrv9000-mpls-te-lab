@@ -226,3 +226,6 @@ This lab hit almost every common failure. A beginner's checklist, in order:
   moved from RSVP-TE to Segment Routing — less core state, automatic TI-LFA, simpler FRR.
 - Once comfortable, try `affinity exclude` (avoid a color) and add `signalled-bandwidth`
   so CSPF must satisfy color *and* capacity at once.
+- Read [`INTER-AREA-TE-and-PCE.md`](INTER-AREA-TE-and-PCE.md) for what happens when a tunnel
+  must cross IGP **area boundaries** (real operators) — loose hops, and the modern PCE/BGP-LS
+  approach that ties back to why the industry moved to SR.
