@@ -1,5 +1,5 @@
 ! ====================================================================
-! R1 - PE  (Provider Edge)  -- FINAL (Phases 1-7)
+! R1 - PE  (Provider Edge)  -- FINAL (Phases 1-8)
 ! Phase 1 : IS-IS L2 baseline
 ! Phase 2 : LDP label distribution
 ! Phase 3 : RSVP + explicit-path TE tunnel (scenic R1->R2->R3->R4)
@@ -7,6 +7,7 @@
 ! Phase 5 : FRR enabled on tunnel
 ! Phase 6 : L3VPN (MP-BGP VPNv4) over MPLS-TE
 ! Phase 7 : Affinity coloring (tunnel-te2 steered by GOLD/BRONZE)
+! Phase 8 : Auto-bandwidth on tunnel-te1 (reservation tracks measured traffic)
 ! IPv4 Lo0 1.1.1.1/32
 ! NOTE: new XR interfaces may come up admin-down -- 'no shutdown' when pasting.
 ! ====================================================================
@@ -62,6 +63,13 @@ interface tunnel-te1
  ! longer find an all-uncolored path and goes down with "No path ... (affinity)".
  ! mask 0x0 = ignore all color bits, so tunnel-te1 rides colored links too.
  affinity 0x0 mask 0x0
+ ! Phase 8: auto-bandwidth -- tunnel resizes its own reservation from measured
+ ! traffic, within min/max, make-before-break. 'application 5' (the minimum) is a
+ ! LAB setting so the resize is observable in minutes; production uses hours/24h.
+ auto-bw
+  application 5
+  bw-limit min 30000 max 500000
+  adjustment-threshold 5
  path-option 1 explicit name SCENIC-R1-TO-R4   ! Phase 3: forced scenic path
  path-option 2 dynamic                          ! Phase 4: CSPF fallback
 !

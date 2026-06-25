@@ -4,7 +4,7 @@
 ![IOS XR](https://img.shields.io/badge/IOS%20XR-24.3.1-005073)
 ![EVE-NG](https://img.shields.io/badge/EVE--NG-Community%20%7C%20Pro-orange)
 ![Transport](https://img.shields.io/badge/transport-RSVP--TE%20%2B%20LDP-success)
-![Phases](https://img.shields.io/badge/phases-7-blueviolet)
+![Phases](https://img.shields.io/badge/phases-8-blueviolet)
 
 A hands-on lab building MPLS Traffic Engineering the **classic way** — using RSVP-TE
 for tunnel signaling and LDP for label distribution. This is how operators ran TE
@@ -112,6 +112,7 @@ and FRR has a real detour to use. The GOLD/BRONZE coloring is the Phase 7 affini
 | 5 | FRR (Fast Reroute) | Link/node protection — compare to TI-LFA in SR lab |
 | 6 | L3VPN over MPLS-TE | Same service as SR lab, different transport |
 | 7 | Affinity / admin-group coloring | Steer a tunnel by link color, not explicit hops |
+| 8 | Auto-bandwidth | Tunnel resizes its own reservation from measured traffic |
 
 ---
 
@@ -124,6 +125,7 @@ and FRR has a real detour to use. The GOLD/BRONZE coloring is the Phase 7 affini
 - [x] **Phase 5** — FRR backup tunnel active, link failure reroutes in <50ms
 - [x] **Phase 6** — CE1↔CE2 L3VPN ping success over MPLS-TE tunnel
 - [x] **Phase 7** — affinity-steered tunnel: GOLD→north path, BRONZE→south path (CSPF, no explicit hops)
+- [x] **Phase 8** — auto-bandwidth resized tunnel-te1's reservation (100M → 30M floor) from measured traffic, make-before-break
 
 ---
 
@@ -488,6 +490,52 @@ commit
 **Clean up after the experiment:** `no interface tunnel-te3` (and
 `no explicit-path name NORTH-R1-TO-R4` if you added it) — `tunnel-te3` is a teaching
 tunnel, not part of the base lab.
+
+---
+
+## Phase 8 — Auto-Bandwidth
+
+**Objective:** stop guessing the reservation. Auto-bandwidth measures the tunnel's
+actual output rate and, each *application period*, resizes the RSVP reservation to match
+— clamped between a min and max — make-before-break.
+
+**Why:** a static `signalled-bandwidth` is either too big (wastes capacity) or too small
+(risks congestion). Auto-bw lets the tunnel track real demand: grow toward `max` in the
+busy hour, shrink back at night, with no operator touching it.
+
+```
+interface tunnel-te1
+ signalled-bandwidth 100000          ! starting value; auto-bw takes over from here
+ auto-bw
+  application 5                      ! resize every 5 min (minimum; default 1440 = 24h)
+  bw-limit min 30000 max 500000      ! never reserve below 30M or above 500M
+  adjustment-threshold 5             ! only resize if measured rate differs > 5%
+```
+
+> `application 5` is a **lab** setting so you can watch it resize in minutes. Production
+> uses hours or the 24h default — frequent resizing churns RSVP state across the core.
+
+**Verify** (read these five columns, ignore the rest):
+
+```
+show mpls traffic-eng tunnels auto-bw brief
+   Tunnel       LSP  Last appl  Requested  Signalled  Highest  Application
+   tunnel-te1     5          -     100000     100000        0     2m 31s   <-- before
+   tunnel-te1     6      30000      30000      30000        0     4m 39s   <-- after one period
+```
+
+- `Highest BW` = peak rate sampled this period · `Requested/Signalled` = live reservation
+  · `Last appl BW` = value set at the last resize · `Application Time Left` = countdown.
+- The reservation dropped **100000 → 30000** (measured traffic was light, so it
+  right-sized down to the `min` floor), and the **LSP ID incremented (5 → 6)** = a
+  make-before-break re-signal at the new bandwidth. No outage.
+- In the detail, `Bandwidth: 100000` is the *configured* base; `Bandwidth Requested:
+  30000` is what auto-bw *actually* reserves now.
+
+> A virtual lab can't push >30 Mbps, so you'll see it shrink to the floor rather than
+> grow. The mechanism is identical either way — measure, then resize within bounds.
+
+**Revert to static if desired:** `interface tunnel-te1 / no auto-bw`.
 
 ---
 
