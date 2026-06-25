@@ -34,8 +34,9 @@ SR-MPLS lab: ../SR-MPLS/ — same topology, same services, SR transport instead 
 | 2026-06-24 | Phase 5 | FRR Ready→Active on R2 cross-link fail; LSP reroutes to bypass tt100. Fixes: README test i/f wrong, node-prot only at R2, missing `ipv4 unnumbered mpls traffic-eng Lo0` | ✅ Pass |
 | 2026-06-24 | Phase 6 | CE1↔CE2 L3VPN ping 100%; R1 CEF for 22.22.22.22 resolves via tunnel-te1 (VPN label 24007 in tunnel). Fixed CE2-R4 EVE wiring mismatch | ✅ Pass |
 | 2026-06-25 | Phase 7 | Affinity coloring: tunnel-te2 include GOLD → R1→R2→R4, include BRONZE → R1→R3→R4 (CSPF, no explicit path). Saw make-before-break reopt | ✅ Pass |
+| 2026-06-25 | Phase 7b | explicit+affinity: color drops a reachable path; `verbatim` bypasses policy not signalling; **default affinity 0x0/0xffff broke tunnel-te1** → fixed with `affinity 0x0 mask 0x0` | ✅ Pass |
 
-> Detailed per-phase output: [`phase1-isis-verify.md`](phase1-isis-verify.md), [`phase2-ldp-verify.md`](phase2-ldp-verify.md), [`phase3-rsvp-te-verify.md`](phase3-rsvp-te-verify.md), [`phase4-cspf-autoroute-verify.md`](phase4-cspf-autoroute-verify.md), [`phase5-frr-verify.md`](phase5-frr-verify.md), [`phase6-l3vpn-verify.md`](phase6-l3vpn-verify.md), [`phase7-affinity-verify.md`](phase7-affinity-verify.md)
+> Detailed per-phase output: [`phase1-isis-verify.md`](phase1-isis-verify.md), [`phase2-ldp-verify.md`](phase2-ldp-verify.md), [`phase3-rsvp-te-verify.md`](phase3-rsvp-te-verify.md), [`phase4-cspf-autoroute-verify.md`](phase4-cspf-autoroute-verify.md), [`phase5-frr-verify.md`](phase5-frr-verify.md), [`phase6-l3vpn-verify.md`](phase6-l3vpn-verify.md), [`phase7-affinity-verify.md`](phase7-affinity-verify.md), [`phase7b-explicit-affinity-verify.md`](phase7b-explicit-affinity-verify.md)
 
 **All seven phases verified end to end. ✅**
 

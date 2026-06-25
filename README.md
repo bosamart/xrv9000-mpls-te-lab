@@ -403,12 +403,91 @@ interface tunnel-te2
  affinity include BRONZE                    ! now 10.13.0.2 -> 10.34.0.2 (south, BRONZE)
 ```
 
-> **Gotchas (both hit during the build):**
+> **Gotchas (all hit during the build):**
 > - In IOS-XR a bare `!` is a *comment*, not a submode exit. Use `exit`/`root` to leave
 >   `config-mpls-te-if` before configuring `interface tunnel-te2` (it's global, not under
 >   `mpls traffic-eng`).
 > - Changing affinity on a live tunnel triggers a **make-before-break** reoptimization —
 >   the old LSP stays up until the new (re-colored) path installs. No traffic loss.
+> - **The default tunnel affinity is `0x0/0xffff` = "use uncolored links only."** The
+>   moment you color these links, any tunnel *without* its own affinity (like `tunnel-te1`)
+>   can't find an all-uncolored path and goes **down** with `No path ... (affinity)`. Fix:
+>   give such tunnels `affinity 0x0 mask 0x0` (ignore colors). This is already in
+>   `configs/R1.txt` — see [Phase 7b](#phase-7b--when-explicit-path-and-color-collide-and-verbatim)
+>   for the full story.
+
+---
+
+## Phase 7b — When explicit-path and color collide (and `verbatim`)
+
+**Objective:** see what happens when a tunnel is pinned to an explicit path **and**
+constrained by affinity at the same time — the path that "looks fine" can refuse to
+come up because a link is the wrong color. Then learn the two ways out.
+
+**The key rule:** an explicit-path option is still **CSPF-verified by default** — the
+headend checks that *every hop's link* satisfies the tunnel's affinity. If one link
+doesn't match, the path-option is invalid and the tunnel goes **down** (unless a
+fallback path-option exists). The `verbatim` keyword turns that check **off** — it
+signals the listed hops as-is, ignoring the TE database and affinity entirely.
+
+This runs on a **separate `tunnel-te3`** so it can't disturb `tunnel-te1`/L3VPN. It
+reuses the existing `SCENIC-R1-TO-R4` explicit path, which crosses R1→R2 (GOLD), the
+**uncolored cross-link**, and R3→R4 (BRONZE).
+
+### Step 1 — explicit path + `include GOLD` → tunnel DOWN
+
+```
+interface tunnel-te3
+ ipv4 unnumbered Loopback0
+ destination 4.4.4.4
+ path-option 1 explicit name SCENIC-R1-TO-R4
+ affinity include GOLD
+commit
+```
+
+```
+show mpls traffic-eng tunnels 3 detail
+! Expect: Oper down, Path: not valid. The scenic path crosses the uncolored
+! cross-link and a BRONZE link, neither of which is GOLD -> fails verification.
+```
+
+The path is perfectly reachable — it's only the **color** that drops it. This is the
+"fail-closed" behaviour operators rely on (e.g. an `exclude DRAIN` color tearing a
+pinned tunnel off a link being drained for maintenance).
+
+### Step 2 — two ways to bring it back
+
+**(a) `verbatim` — ignore the color, signal the hops anyway:**
+```
+interface tunnel-te3
+ path-option 1 explicit name SCENIC-R1-TO-R4 verbatim
+commit
+! Expect: up. verbatim skips CSPF/affinity, so the BRONZE/uncolored links are accepted.
+```
+
+**(b) Make the path actually comply — pin an all-GOLD path instead:**
+```
+explicit-path name NORTH-R1-TO-R4
+ index 10 next-address strict ipv4 unicast 10.12.0.2   ! R2 (GOLD link)
+ index 20 next-address strict ipv4 unicast 10.24.0.2   ! R4 (GOLD link)
+!
+interface tunnel-te3
+ path-option 1 explicit name NORTH-R1-TO-R4    ! no verbatim — color IS checked, and passes
+commit
+! Expect: up, path R1->R2->R4, because every hop is now on a GOLD link.
+```
+
+> **Real-world shape:** you rarely want a hard down, so production tunnels stack
+> path-options that degrade gracefully:
+> ```
+> path-option 1 explicit name PRIMARY              ! pinned + must satisfy affinity
+> path-option 2 dynamic                            ! CSPF, still honors affinity
+> path-option 3 explicit name LASTRESORT verbatim  ! ignore constraints, just come up
+> ```
+
+**Clean up after the experiment:** `no interface tunnel-te3` (and
+`no explicit-path name NORTH-R1-TO-R4` if you added it) — `tunnel-te3` is a teaching
+tunnel, not part of the base lab.
 
 ---
 

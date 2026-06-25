@@ -56,6 +56,12 @@ interface tunnel-te1
  fast-reroute protect bandwidth
  fast-reroute protect node
  signalled-bandwidth 100000            ! Phase 4: reserve 100 Mbps
+ ! Phase 7 side-effect fix: the DEFAULT tunnel affinity is 0x0/0xffff =
+ ! "only use links with no admin-group bits set" (i.e. uncolored links only).
+ ! Once Phase 7 colors the core links GOLD/BRONZE, this production tunnel can no
+ ! longer find an all-uncolored path and goes down with "No path ... (affinity)".
+ ! mask 0x0 = ignore all color bits, so tunnel-te1 rides colored links too.
+ affinity 0x0 mask 0x0
  path-option 1 explicit name SCENIC-R1-TO-R4   ! Phase 3: forced scenic path
  path-option 2 dynamic                          ! Phase 4: CSPF fallback
 !

@@ -167,6 +167,33 @@ hops touched.
 R1→R3→R4 (BRONZE) when you flip the color, and the change happens **make-before-break**
 (old path stays up until the new one is ready).
 
+### Phase 7b — what if you pin a path *and* set a color? *(important beginner trap)*
+
+You can put an **explicit path** (Phase 3) and an **affinity color** (Phase 7) on the
+same tunnel. People do — for example, "use exactly this path, but only if its links are
+the right color." Here's the rule that surprises beginners:
+
+> By default the router **double-checks** your explicit path against the color. If even
+> one hop is on a wrong-colored link, the path is rejected and the **tunnel goes down**
+> — even though the path is perfectly reachable. The color, not the path, drops it.
+
+That's often *on purpose* — it's a safety net. The classic case is **maintenance**:
+operators tag a link with a "drain" color and give tunnels `affinity exclude DRAIN`, so
+any tunnel — even a pinned one — automatically steps off that link before work starts,
+rather than carrying traffic across something that's about to go down.
+
+The escape hatch is one keyword: **`verbatim`**.
+
+```
+path-option 1 explicit name MY-PATH            ! color IS checked -> can drop the tunnel
+path-option 1 explicit name MY-PATH verbatim   ! color IGNORED -> signal the hops as-is
+```
+
+`verbatim` means "signal these exact hops, don't consult the TE map or the colors."
+Use it when you truly want the path no matter what; leave it off when you want the
+color to act as a guard. Try it live in the README's **Phase 7b** — it's a two-minute
+experiment that makes this click.
+
 ---
 
 ## 6. How to debug when a tunnel won't come up
