@@ -131,9 +131,208 @@ and FRR has a real detour to use. The GOLD/BRONZE coloring is the Phase 7 affini
 
 ---
 
+## The paste ritual (do this for every phase)
+
+New to IOS-XR? This is the loop you repeat in **every** phase below. XR stages your edits in a
+**candidate buffer** and applies them only on `commit` — so a phase lands as one clean, atomic
+change you can verify. **The config blocks below leave the `commit` line out to stay readable — you
+add it.**
+
+1. **Read the phase's config block** and note who it's for — some are labelled **"every core
+   router,"** others **"R1 headend only."**
+2. On each target router, type `config` (or `configure terminal`). **Nothing is live yet** — you're
+   editing a *candidate* copy.
+3. **Paste that router's lines.**
+4. Type `commit`. **This is the moment it goes live.** (Made a mess? `abort` discards the candidate.)
+5. Type `end`, then repeat on the next router the phase names.
+6. When the phase is done on every router, run its **Verify** commands before moving on.
+
+```
+config
+  ... paste the phase block ...
+commit          ! nothing takes effect until here — the blocks below omit this line
+end
+```
+
+> **If an interface stays down** after commit, add `no shutdown` — new XR interfaces can come up
+> admin-down. `rollback configuration last 1` undoes the last commit.
+>
+> **Phase 1 (IS-IS) has no config block here** — it's the same IGP as the
+> [SR-MPLS lab](https://github.com/bosamart/sr-mpls-iosxr-eveng-lab). Building phase by phase from
+> scratch? Take the IS-IS baseline from `configs/` (the `! Phase 1` lines) or that lab first.
+
+---
+
 ## Phase 1 — IS-IS baseline
 
 **Objective:** every loopback reachable via IS-IS L2 before any MPLS.
+
+<details>
+<summary><b>📋 Copy per router — ready to paste</b> (IS-IS baseline, includes addressing)</summary>
+
+```
+! ===================== R1 =====================
+interface Loopback0
+ ipv4 address 1.1.1.1 255.255.255.255
+!
+interface GigabitEthernet0/0/0/1
+ ipv4 address 10.12.0.1 255.255.255.252
+!
+interface GigabitEthernet0/0/0/3
+ ipv4 address 10.13.0.1 255.255.255.252
+!
+router isis CORE
+ is-type level-2-only
+ net 49.0001.0000.0000.0001.00
+ address-family ipv4 unicast
+  metric-style wide
+ !
+ interface Loopback0
+  passive
+  address-family ipv4 unicast
+  !
+ !
+ interface GigabitEthernet0/0/0/1
+  point-to-point
+  address-family ipv4 unicast
+  !
+ !
+ interface GigabitEthernet0/0/0/3
+  point-to-point
+  address-family ipv4 unicast
+  !
+ !
+!
+commit
+```
+
+```
+! ===================== R2 =====================
+interface Loopback0
+ ipv4 address 2.2.2.2 255.255.255.255
+!
+interface GigabitEthernet0/0/0/0
+ ipv4 address 10.12.0.2 255.255.255.252
+!
+interface GigabitEthernet0/0/0/1
+ ipv4 address 10.23.0.1 255.255.255.252
+!
+interface GigabitEthernet0/0/0/3
+ ipv4 address 10.24.0.1 255.255.255.252
+!
+router isis CORE
+ is-type level-2-only
+ net 49.0001.0000.0000.0002.00
+ address-family ipv4 unicast
+  metric-style wide
+ !
+ interface Loopback0
+  passive
+  address-family ipv4 unicast
+  !
+ !
+ interface GigabitEthernet0/0/0/0
+  point-to-point
+  address-family ipv4 unicast
+  !
+ !
+ interface GigabitEthernet0/0/0/1
+  point-to-point
+  address-family ipv4 unicast
+  !
+ !
+ interface GigabitEthernet0/0/0/3
+  point-to-point
+  address-family ipv4 unicast
+  !
+ !
+!
+commit
+```
+
+```
+! ===================== R3 =====================
+interface Loopback0
+ ipv4 address 3.3.3.3 255.255.255.255
+!
+interface GigabitEthernet0/0/0/0
+ ipv4 address 10.23.0.2 255.255.255.252
+!
+interface GigabitEthernet0/0/0/2
+ ipv4 address 10.13.0.2 255.255.255.252
+!
+interface GigabitEthernet0/0/0/4
+ ipv4 address 10.34.0.1 255.255.255.252
+!
+router isis CORE
+ is-type level-2-only
+ net 49.0001.0000.0000.0003.00
+ address-family ipv4 unicast
+  metric-style wide
+ !
+ interface Loopback0
+  passive
+  address-family ipv4 unicast
+  !
+ !
+ interface GigabitEthernet0/0/0/0
+  point-to-point
+  address-family ipv4 unicast
+  !
+ !
+ interface GigabitEthernet0/0/0/2
+  point-to-point
+  address-family ipv4 unicast
+  !
+ !
+ interface GigabitEthernet0/0/0/4
+  point-to-point
+  address-family ipv4 unicast
+  !
+ !
+!
+commit
+```
+
+```
+! ===================== R4 =====================
+interface Loopback0
+ ipv4 address 4.4.4.4 255.255.255.255
+!
+interface GigabitEthernet0/0/0/2
+ ipv4 address 10.24.0.2 255.255.255.252
+!
+interface GigabitEthernet0/0/0/3
+ ipv4 address 10.34.0.2 255.255.255.252
+!
+router isis CORE
+ is-type level-2-only
+ net 49.0001.0000.0000.0004.00
+ address-family ipv4 unicast
+  metric-style wide
+ !
+ interface Loopback0
+  passive
+  address-family ipv4 unicast
+  !
+ !
+ interface GigabitEthernet0/0/0/2
+  point-to-point
+  address-family ipv4 unicast
+  !
+ !
+ interface GigabitEthernet0/0/0/3
+  point-to-point
+  address-family ipv4 unicast
+  !
+ !
+!
+commit
+```
+
+> R4's `Gi0/0/0/1` is the CE2 / L3VPN port (added in Phase 6) — not in IS-IS.
+
+</details>
 
 ```
 show isis neighbors
@@ -153,6 +352,8 @@ Expected: full adjacencies, ECMP routes to R4 via both R2 and R3.
 LDP assigns a label to every IGP prefix and distributes it to neighbors.
 No path control — just shortest-path MPLS forwarding.
 
+*First time? → follow [the paste ritual](#the-paste-ritual-do-this-for-every-phase): `config` → paste → `commit`. Apply this LDP block on **every core router** (R1–R4).*
+
 ```
 mpls ldp
  router-id 1.1.1.1
@@ -170,6 +371,63 @@ traceroute 4.4.4.4 source 1.1.1.1  ! shows MPLS label in transit
 ```
 
 Expected: traceroute shows a label pushed at R1, popped at R3 (PHP), plain IP at R4.
+
+<details>
+<summary><b>📋 Copy per router — ready to paste</b></summary>
+
+```
+! ===================== R1 =====================
+mpls ldp
+ router-id 1.1.1.1
+ interface GigabitEthernet0/0/0/1
+ !
+ interface GigabitEthernet0/0/0/3
+ !
+!
+commit
+```
+
+```
+! ===================== R2 =====================
+mpls ldp
+ router-id 2.2.2.2
+ interface GigabitEthernet0/0/0/0
+ !
+ interface GigabitEthernet0/0/0/1
+ !
+ interface GigabitEthernet0/0/0/3
+ !
+!
+commit
+```
+
+```
+! ===================== R3 =====================
+mpls ldp
+ router-id 3.3.3.3
+ interface GigabitEthernet0/0/0/0
+ !
+ interface GigabitEthernet0/0/0/2
+ !
+ interface GigabitEthernet0/0/0/4
+ !
+!
+commit
+```
+
+```
+! ===================== R4 =====================
+mpls ldp
+ router-id 4.4.4.4
+ interface GigabitEthernet0/0/0/2
+ !
+ interface GigabitEthernet0/0/0/3
+ !
+!
+commit
+```
+
+</details>
 
 ---
 
@@ -231,6 +489,132 @@ traceroute tunnel-te1                       ! 3 hops: R2→R3→R4
 > the tunnel. This is the "statefulness" — every transit router knows about this tunnel.
 > Compare: in the SR-TE lab, only R1 knows about the policy. R2 and R3 just forward labels.
 
+<details>
+<summary><b>📋 Copy per router — ready to paste</b> (RSVP + MPLS-TE + IS-IS TE extensions; R1 also gets the tunnel)</summary>
+
+```
+! ===================== R1 (headend) =====================
+rsvp
+ interface GigabitEthernet0/0/0/1
+  bandwidth 1000000
+ !
+ interface GigabitEthernet0/0/0/3
+  bandwidth 1000000
+ !
+!
+mpls traffic-eng
+ interface GigabitEthernet0/0/0/1
+ !
+ interface GigabitEthernet0/0/0/3
+ !
+!
+router isis CORE
+ address-family ipv4 unicast
+  mpls traffic-eng level-2-only
+  mpls traffic-eng router-id Loopback0
+ !
+!
+explicit-path name SCENIC-R1-TO-R4
+ index 10 next-address strict ipv4 unicast 10.12.0.2
+ index 20 next-address strict ipv4 unicast 10.23.0.2
+ index 30 next-address strict ipv4 unicast 10.34.0.2
+!
+interface tunnel-te1
+ ipv4 unnumbered Loopback0
+ destination 4.4.4.4
+ path-option 1 explicit name SCENIC-R1-TO-R4
+ path-option 2 dynamic
+!
+commit
+```
+
+```
+! ===================== R2 =====================
+rsvp
+ interface GigabitEthernet0/0/0/0
+  bandwidth 1000000
+ !
+ interface GigabitEthernet0/0/0/1
+  bandwidth 1000000
+ !
+ interface GigabitEthernet0/0/0/3
+  bandwidth 1000000
+ !
+!
+mpls traffic-eng
+ interface GigabitEthernet0/0/0/0
+ !
+ interface GigabitEthernet0/0/0/1
+ !
+ interface GigabitEthernet0/0/0/3
+ !
+!
+router isis CORE
+ address-family ipv4 unicast
+  mpls traffic-eng level-2-only
+  mpls traffic-eng router-id Loopback0
+ !
+!
+commit
+```
+
+```
+! ===================== R3 =====================
+rsvp
+ interface GigabitEthernet0/0/0/0
+  bandwidth 1000000
+ !
+ interface GigabitEthernet0/0/0/2
+  bandwidth 1000000
+ !
+ interface GigabitEthernet0/0/0/4
+  bandwidth 1000000
+ !
+!
+mpls traffic-eng
+ interface GigabitEthernet0/0/0/0
+ !
+ interface GigabitEthernet0/0/0/2
+ !
+ interface GigabitEthernet0/0/0/4
+ !
+!
+router isis CORE
+ address-family ipv4 unicast
+  mpls traffic-eng level-2-only
+  mpls traffic-eng router-id Loopback0
+ !
+!
+commit
+```
+
+```
+! ===================== R4 (tail) =====================
+rsvp
+ interface GigabitEthernet0/0/0/2
+  bandwidth 1000000
+ !
+ interface GigabitEthernet0/0/0/3
+  bandwidth 1000000
+ !
+!
+mpls traffic-eng
+ interface GigabitEthernet0/0/0/2
+ !
+ interface GigabitEthernet0/0/0/3
+ !
+!
+router isis CORE
+ address-family ipv4 unicast
+  mpls traffic-eng level-2-only
+  mpls traffic-eng router-id Loopback0
+ !
+!
+commit
+```
+
+</details>
+
 ---
 
 ## Phase 4 — MPLS-TE: CSPF and autoroute
@@ -265,6 +649,24 @@ show mpls traffic-eng link-management bandwidth-allocation
 > available on each link. CSPF reads this to find the best path meeting the constraint.
 > When you reserve bandwidth on the tunnel, that bandwidth is subtracted from the link's
 > available pool in every router's TE topology database.
+
+<details>
+<summary><b>📋 Copy R1 — ready to paste</b> (headend only)</summary>
+
+```
+! ===================== R1 (only) =====================
+interface tunnel-te1
+ autoroute announce
+ signalled-bandwidth 100000
+!
+commit
+```
+
+> This matches the shipped `configs/R1.txt`, which keeps `path-option 1 explicit` as primary with
+> `path-option 2 dynamic` as the CSPF fallback. To watch pure CSPF pick the path (as the text
+> above describes), also set `path-option 1 dynamic` on `tunnel-te1`.
+
+</details>
 
 ---
 
@@ -317,6 +719,63 @@ interface tunnel-te1
 > the tunnel tail — so there is no next-next hop to bypass to; R3 can only do link
 > protection. R2 has a direct link to R4, so it can bypass node R3 entirely.
 
+<details>
+<summary><b>📋 Copy per router — ready to paste</b> (R1 tunnel FRR + R2/R3/R4 backup pools)</summary>
+
+```
+! ===================== R1 (headend) =====================
+interface tunnel-te1
+ fast-reroute
+ fast-reroute protect bandwidth
+ fast-reroute protect node
+!
+commit
+```
+
+```
+! ===================== R2 (PLR — protects the on-path R2↔R3 cross-link) =====================
+ipv4 unnumbered mpls traffic-eng Loopback0
+!
+mpls traffic-eng
+ interface GigabitEthernet0/0/0/1
+  auto-tunnel backup
+ !
+ auto-tunnel backup
+  tunnel-id min 100 max 200
+ !
+!
+commit
+```
+
+```
+! ===================== R3 (PLR — protects the on-path R3→R4 link) =====================
+ipv4 unnumbered mpls traffic-eng Loopback0
+!
+mpls traffic-eng
+ interface GigabitEthernet0/0/0/4
+  auto-tunnel backup
+ !
+ auto-tunnel backup
+  tunnel-id min 100 max 200
+ !
+!
+commit
+```
+
+```
+! ===================== R4 (tail — source + backup pool) =====================
+ipv4 unnumbered mpls traffic-eng Loopback0
+!
+mpls traffic-eng
+ auto-tunnel backup
+  tunnel-id min 100 max 200
+ !
+!
+commit
+```
+
+</details>
+
 **Verify**
 
 ```
@@ -345,6 +804,161 @@ next-hop path to R4 — the VPN label stack sits inside the TE tunnel.
 ! Same VRF/BGP config as SR-MPLS lab Phase 5 — no changes needed
 ! Autoroute on tunnel-te1 handles the transport automatically
 ```
+
+<details>
+<summary><b>📋 Copy per router — ready to paste</b> (PEs R1/R4 + CEs)</summary>
+
+```
+! ===================== R1 (PE) =====================
+vrf CUST-A
+ address-family ipv4 unicast
+  import route-target
+   100:1
+  !
+  export route-target
+   100:1
+  !
+ !
+!
+route-policy PASS
+  pass
+end-policy
+!
+interface GigabitEthernet0/0/0/0
+ vrf CUST-A
+ ipv4 address 192.168.11.1 255.255.255.252
+!
+router bgp 100
+ bgp router-id 1.1.1.1
+ address-family vpnv4 unicast
+ !
+ neighbor 4.4.4.4
+  remote-as 100
+  update-source Loopback0
+  address-family vpnv4 unicast
+  !
+ !
+ vrf CUST-A
+  rd 100:1
+  address-family ipv4 unicast
+   redistribute connected
+  !
+  neighbor 192.168.11.2
+   remote-as 65001
+   address-family ipv4 unicast
+    route-policy PASS in
+    route-policy PASS out
+   !
+  !
+ !
+!
+commit
+```
+
+```
+! ===================== R4 (PE) =====================
+vrf CUST-A
+ address-family ipv4 unicast
+  import route-target
+   100:1
+  !
+  export route-target
+   100:1
+  !
+ !
+!
+route-policy PASS
+  pass
+end-policy
+!
+interface GigabitEthernet0/0/0/1
+ vrf CUST-A
+ ipv4 address 192.168.44.1 255.255.255.252
+!
+router bgp 100
+ bgp router-id 4.4.4.4
+ address-family vpnv4 unicast
+ !
+ neighbor 1.1.1.1
+  remote-as 100
+  update-source Loopback0
+  address-family vpnv4 unicast
+  !
+ !
+ vrf CUST-A
+  rd 100:1
+  address-family ipv4 unicast
+   redistribute connected
+  !
+  neighbor 192.168.44.2
+   remote-as 65002
+   address-family ipv4 unicast
+    route-policy PASS in
+    route-policy PASS out
+   !
+  !
+ !
+!
+commit
+```
+
+```
+! ===================== CE1 (AS 65001) =====================
+route-policy PASS
+  pass
+end-policy
+!
+interface Loopback0
+ ipv4 address 11.11.11.11 255.255.255.255
+!
+interface GigabitEthernet0/0/0/1
+ ipv4 address 192.168.11.2 255.255.255.252
+!
+router bgp 65001
+ bgp router-id 11.11.11.11
+ address-family ipv4 unicast
+  network 11.11.11.11/32
+ !
+ neighbor 192.168.11.1
+  remote-as 100
+  address-family ipv4 unicast
+   route-policy PASS in
+   route-policy PASS out
+  !
+ !
+!
+commit
+```
+
+```
+! ===================== CE2 (AS 65002) =====================
+route-policy PASS
+  pass
+end-policy
+!
+interface Loopback0
+ ipv4 address 22.22.22.22 255.255.255.255
+!
+interface GigabitEthernet0/0/0/0
+ ipv4 address 192.168.44.2 255.255.255.252
+!
+router bgp 65002
+ bgp router-id 22.22.22.22
+ address-family ipv4 unicast
+  network 22.22.22.22/32
+ !
+ neighbor 192.168.44.1
+  remote-as 100
+  address-family ipv4 unicast
+   route-policy PASS in
+   route-policy PASS out
+  !
+ !
+!
+commit
+```
+
+</details>
 
 **Verify**
 
@@ -393,6 +1007,84 @@ interface tunnel-te2
  path-option 1 dynamic
  affinity include GOLD            ! CSPF uses GOLD-only links -> north path
 ```
+
+<details>
+<summary><b>📋 Copy per router — ready to paste</b> (affinity map + link colors on all routers; tunnel-te2 on R1)</summary>
+
+> Colors: north path R1–R2–R4 = **GOLD**, south path R1–R3–R4 = **BRONZE**, the R2↔R3 cross-link is
+> left uncolored. `tunnel-te1` also gets `affinity 0x0 mask 0x0` so it ignores colors and stays up.
+
+```
+! ===================== R1 =====================
+mpls traffic-eng
+ affinity-map GOLD bit-position 0
+ affinity-map BRONZE bit-position 1
+ interface GigabitEthernet0/0/0/1
+  attribute-names GOLD
+ !
+ interface GigabitEthernet0/0/0/3
+  attribute-names BRONZE
+ !
+ reoptimize 300
+!
+interface tunnel-te1
+ affinity 0x0 mask 0x0
+!
+interface tunnel-te2
+ ipv4 unnumbered Loopback0
+ destination 4.4.4.4
+ path-option 1 dynamic
+ affinity include GOLD
+!
+commit
+```
+
+```
+! ===================== R2 (both core links GOLD; cross-link uncolored) =====================
+mpls traffic-eng
+ affinity-map GOLD bit-position 0
+ affinity-map BRONZE bit-position 1
+ interface GigabitEthernet0/0/0/0
+  attribute-names GOLD
+ !
+ interface GigabitEthernet0/0/0/3
+  attribute-names GOLD
+ !
+!
+commit
+```
+
+```
+! ===================== R3 (both core links BRONZE; cross-link uncolored) =====================
+mpls traffic-eng
+ affinity-map GOLD bit-position 0
+ affinity-map BRONZE bit-position 1
+ interface GigabitEthernet0/0/0/2
+  attribute-names BRONZE
+ !
+ interface GigabitEthernet0/0/0/4
+  attribute-names BRONZE
+ !
+!
+commit
+```
+
+```
+! ===================== R4 =====================
+mpls traffic-eng
+ affinity-map GOLD bit-position 0
+ affinity-map BRONZE bit-position 1
+ interface GigabitEthernet0/0/0/2
+  attribute-names GOLD
+ !
+ interface GigabitEthernet0/0/0/3
+  attribute-names BRONZE
+ !
+!
+commit
+```
+
+</details>
 
 **Verify** (tunnel-te2 has no autoroute — read the path from the tunnel detail, not a
 destination traceroute):
@@ -516,6 +1208,22 @@ interface tunnel-te1
 
 > `application 5` is a **lab** setting so you can watch it resize in minutes. Production
 > uses hours or the 24h default — frequent resizing churns RSVP state across the core.
+
+<details>
+<summary><b>📋 Copy R1 — ready to paste</b> (headend only)</summary>
+
+```
+! ===================== R1 (only) =====================
+interface tunnel-te1
+ auto-bw
+  application 5
+  bw-limit min 30000 max 500000
+  adjustment-threshold 5
+!
+commit
+```
+
+</details>
 
 **Verify** (read these five columns, ignore the rest):
 
