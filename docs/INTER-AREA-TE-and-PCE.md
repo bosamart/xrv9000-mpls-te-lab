@@ -108,7 +108,7 @@ to anywhere" transport is built.
 
 ---
 
-## 4. How this maps to a real operator (your Cellcard world)
+## 4. How this maps to a real operator
 
 Mobile/SP networks are layered: **access** (many small nodes) → **aggregation** → **core**.
 Each layer is often its own IGP area or even its own domain, for scale and blast-radius

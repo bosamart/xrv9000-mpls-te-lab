@@ -50,7 +50,5 @@ inventory*.ini
 
 # --- Work-data safety net (public repo; work stays sanitized) ---
 # Force-add a genuinely safe file with: git add -f <file>
-*telcotech*
-*ezecom*
-*cellcard*
-*metfone*
+*work-notes*
+*internal*
